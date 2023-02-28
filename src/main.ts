@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import { ValidationPipe } from '@nestjs/common/pipes';
 
 async function bootstrap() {
-  const PORT = process.env.PORT || 3001;
+  const PORT = process.env.PORT || 3000;
   const app = await NestFactory.create(AppModule, { cors: true });
 
   app.use(helmet());

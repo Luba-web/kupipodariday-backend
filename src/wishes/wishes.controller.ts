@@ -103,6 +103,10 @@ export class WishesController {
     };
     await this.wishesService.create(req.user, copyWish);
     await this.wishesService.update(wish.id, { copied: wish.copied++ });
+
+    if (wish.copied > 0) {
+      throw new NotFoundException('Вы уже копировали');
+    }
     return {};
   }
 }

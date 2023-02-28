@@ -32,7 +32,7 @@ export class UsersService {
   async findById(id: number): Promise<UserPublicProfileResponse> {
     const user = await this.userRepository.findOneBy({ id });
 
-    if (!user) throw new NotFoundException('Пользоатель не найден');
+    if (!user) throw new NotFoundException('Пользователь не найден');
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...result } = user;
 
@@ -48,6 +48,10 @@ export class UsersService {
   }
 
   async update(id: number, updateUserDto: UpdateUserDto) {
+    const user = await this.userRepository.findOneBy({ id });
+
+    if (!user) throw new NotFoundException('Пользователь не найден');
+
     if (updateUserDto.password) {
       const password = await bcrypt.hash(updateUserDto.password, 10);
       return this.userRepository.update(id, {
@@ -55,6 +59,15 @@ export class UsersService {
         password,
       });
     }
+
+    if (updateUserDto.username && updateUserDto.username !== user.username) {
+      throw new NotFoundException('Пользователь c таким именем есть');
+    }
+
+    if (updateUserDto.email && updateUserDto.email !== user.email) {
+      throw new NotFoundException('Пользователь c такой почтой есть');
+    }
+
     return await this.userRepository.update(id, updateUserDto);
   }
 

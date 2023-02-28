@@ -45,7 +45,7 @@ export class UsersController {
     await this.usersService.update(req.user.id, updateUserDto);
     const user = await this.usersService.findByName(req.user.username);
 
-    if (!user) throw new NotFoundException('Пользоатель не найден');
+    if (!user) throw new NotFoundException('Пользователь не найден');
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, createdAt, updatedAt, ...result } = user;
     return result;
@@ -60,7 +60,7 @@ export class UsersController {
   async findUserByName(@Param('username') username: string) {
     const user = await this.usersService.findByName(username);
 
-    if (!user) throw new NotFoundException('Пользоатель не найден');
+    if (!user) throw new NotFoundException('Пользователь не найден');
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...result } = user;
     return result;
