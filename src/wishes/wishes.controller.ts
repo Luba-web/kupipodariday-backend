@@ -12,6 +12,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { UseGuards } from '@nestjs/common/decorators';
+import { ForbiddenException } from '@nestjs/common/exceptions';
 import { JwtAuthGuard } from '../auth/jwtAuth.guard';
 import { CreateWishDto } from './dto/createWish.dto';
 import { UpdateWishDto } from './dto/updateWish.dto';
@@ -91,6 +92,22 @@ export class WishesController {
   @Post(':id/copy')
   async copy(@Req() req, @Param('id', ParseIntPipe) id: number) {
     const wish = await this.wishesService.findById(id);
+    const { name, link, price, owner } = wish;
+    const isExist = (await this.wishesService.findOne({
+      where: {
+        name,
+        link,
+        price,
+        owner: { id: owner.id },
+      },
+      relations: { owner: true },
+    }))
+      ? true
+      : false;
+    if (isExist) {
+      throw new ForbiddenException('Вы уже копировали себе этот подарок');
+    }
+
     if (req.user.id !== wish.owner.id) {
       throw new NotFoundException('У вас нет прав');
     }
@@ -104,9 +121,9 @@ export class WishesController {
     await this.wishesService.create(req.user, copyWish);
     await this.wishesService.update(wish.id, { copied: wish.copied++ });
 
-    if (wish.copied > 0) {
-      throw new NotFoundException('Вы уже копировали');
-    }
+    // if (wish.copied > 0) {
+    //   throw new NotFoundException('Вы уже копировали');
+    // }
     return {};
   }
 }

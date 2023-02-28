@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.enitity';
 import { CreateUserDto } from './dto/createUser.dto';
 import { UpdateUserDto } from './dto/updateUser.dto';
 import { FindUsersDto } from './dto/findUsers.dto';
-import { NotFoundException } from '@nestjs/common/exceptions';
+import {
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common/exceptions';
 import { UserPublicProfileResponse } from './dto/userPublicProfileResponse.dto';
 
 @Injectable()
@@ -47,7 +50,22 @@ export class UsersService {
     return this.userRepository.delete({ id });
   }
 
+  findOne(query: FindOneOptions<User>) {
+    return this.userRepository.findOne(query);
+  }
+
   async update(id: number, updateUserDto: UpdateUserDto) {
+    const { username, email } = updateUserDto;
+    const isExist = (await this.findOne({
+      where: [{ email }, { username }],
+    }))
+      ? true
+      : false;
+    if (isExist)
+      throw new ConflictException(
+        'Пользователь с таким email или username уже зарегистрирован',
+      );
+
     const user = await this.userRepository.findOneBy({ id });
 
     if (!user) throw new NotFoundException('Пользователь не найден');
@@ -58,14 +76,6 @@ export class UsersService {
         ...updateUserDto,
         password,
       });
-    }
-
-    if (updateUserDto.username && updateUserDto.username !== user.username) {
-      throw new NotFoundException('Пользователь c таким именем есть');
-    }
-
-    if (updateUserDto.email && updateUserDto.email !== user.email) {
-      throw new NotFoundException('Пользователь c такой почтой есть');
     }
 
     return await this.userRepository.update(id, updateUserDto);
