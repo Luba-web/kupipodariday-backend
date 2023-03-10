@@ -10,7 +10,9 @@ import {
   Req,
 } from '@nestjs/common';
 import { UseGuards } from '@nestjs/common/decorators';
+import { NotFoundException } from '@nestjs/common/exceptions';
 import { JwtAuthGuard } from 'src/auth/jwtAuth.guard';
+import { UsersService } from 'src/users/users.service';
 import { CreateWishlistDto } from './dto/createWishlist.dto';
 import { UpdateWishlistDto } from './dto/updateWishlist.dto';
 import { Wishlist } from './entities/wishlist.enitity';
@@ -20,7 +22,10 @@ import { WishlistsService } from './wishlists.service';
 // странный путь
 @Controller('wishlistlists')
 export class WishlistsController {
-  constructor(private wishlistsService: WishlistsService) {}
+  constructor(
+    private wishlistsService: WishlistsService,
+    private usersService: UsersService,
+  ) {}
 
   @Post()
   async create(
@@ -59,7 +64,12 @@ export class WishlistsController {
   }
 
   @Delete(':id')
-  async removeById(@Param('id', ParseIntPipe) id: number) {
+  async removeById(@Req() req, @Param('id', ParseIntPipe) id: number) {
+    const user = await this.usersService.findById(id);
+    if (user !== req.user) {
+      throw new NotFoundException('Этот лист вам не принадлежит');
+    }
+
     return this.wishlistsService.removeById(id);
   }
 }
