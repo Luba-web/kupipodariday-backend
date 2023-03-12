@@ -18,6 +18,7 @@ import { UsersService } from './users.service';
 import { FindUsersDto } from './dto/findUsers.dto';
 import { Delete, Param } from '@nestjs/common/decorators';
 import { ParseIntPipe } from '@nestjs/common/pipes/parse-int.pipe';
+import { UserProfileResponse } from './dto/userProfileResponse.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('users')
@@ -41,14 +42,11 @@ export class UsersController {
   async update(
     @Req() req,
     @Body() updateUserDto: UpdateUserDto,
-  ): Promise<UpdateUserDto> {
+  ): Promise<UserProfileResponse> {
     await this.usersService.update(req.user.id, updateUserDto);
     const user = await this.usersService.findByName(req.user.username);
-
     if (!user) throw new NotFoundException('Пользователь не найден');
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id, createdAt, updatedAt, ...result } = user;
-    return result;
+    return user;
   }
 
   @Post('find')
@@ -58,12 +56,7 @@ export class UsersController {
 
   @Get(':username')
   async findUserByName(@Param('username') username: string) {
-    const user = await this.usersService.findByName(username);
-
-    if (!user) throw new NotFoundException('Пользователь не найден');
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...result } = user;
-    return result;
+    return await this.usersService.findByName(username);
   }
 
   @Get('me/wishes')
@@ -79,9 +72,9 @@ export class UsersController {
   }
 
   @Delete(':id')
-  async removeById(@Param('id', ParseIntPipe) id: number) {
+  async remove(@Param('id', ParseIntPipe) id: number) {
     const user = await this.usersService.findById(id);
     if (!user) throw new NotFoundException();
-    return this.usersService.removeById(id);
+    return this.usersService.remove(id);
   }
 }

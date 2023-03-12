@@ -62,20 +62,25 @@ export class WishesService {
   }
 
   async update(id: number, updateDto: UpdateWishDto) {
-    await this.wishRepository.update(
+    return await this.wishRepository.update(
       { id },
       { ...updateDto, updatedAt: new Date() },
     );
-    return {};
   }
 
   async findMany(item: FindManyOptions<Wish>) {
     return this.wishRepository.find(item);
   }
 
-  async findWishes(id: number) {
-    const user = await this.wishRepository.find({ where: { id } });
-    return user;
+  async findWishes(userId: number) {
+    return this.wishRepository.find({
+      where: { owner: { id: userId } },
+      order: { createdAt: 'DESC' },
+      relations: {
+        owner: true,
+        offers: true,
+      },
+    });
   }
 
   findOne(query: FindOneOptions<Wish>) {

@@ -6,7 +6,15 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { IsDate, IsEmail, IsInt, IsString, Length, Min } from 'class-validator';
+import {
+  IsDate,
+  IsEmail,
+  IsInt,
+  IsNotEmpty,
+  IsString,
+  Length,
+  Min,
+} from 'class-validator';
 import { Wish } from 'src/wishes/entities/wish.enitity';
 import { Offer } from 'src/offers/entities/offer.enitity';
 import { Wishlist } from 'src/wishlists/entities/wishlist.enitity';
@@ -44,7 +52,8 @@ export class User {
   @IsEmail()
   email: string;
 
-  @Column()
+  @Column({ select: false })
+  @IsNotEmpty()
   password: string;
 
   @CreateDateColumn()

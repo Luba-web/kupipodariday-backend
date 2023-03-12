@@ -32,21 +32,28 @@ export class UsersService {
     return this.userRepository.save(createdUser);
   }
 
-  async findById(id: number): Promise<UserPublicProfileResponse> {
-    const user = await this.userRepository.findOneBy({ id });
-
-    if (!user) throw new NotFoundException('Пользователь не найден');
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...result } = user;
-
-    return result;
+  async findById(
+    id: number,
+    password = false,
+  ): Promise<UserPublicProfileResponse> {
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect(password ? 'user.password' : '')
+      .where('user.id = :id', { id })
+      .getOne();
+    return user;
   }
 
-  async findByName(username: string) {
-    return await this.userRepository.findOneBy({ username });
+  async findByName(username: string, password = false) {
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect(password ? 'user.password' : '')
+      .where('user.username = :username', { username })
+      .getOne();
+    return user;
   }
 
-  async removeById(id: number) {
+  async remove(id: number) {
     return this.userRepository.delete({ id });
   }
 
@@ -55,17 +62,18 @@ export class UsersService {
   }
 
   async update(id: number, updateUserDto: UpdateUserDto) {
-    const { username, email } = updateUserDto;
-    const isExist = (await this.findOne({
-      where: [{ email }, { username }],
-    }))
-      ? true
-      : false;
-    if (isExist)
-      throw new ConflictException(
-        'Пользователь с таким email или username уже зарегистрирован',
-      );
-
+    if (updateUserDto.username || updateUserDto.email) {
+      const { username, email } = updateUserDto;
+      const isExist = (await this.findOne({
+        where: [{ email }, { username }],
+      }))
+        ? true
+        : false;
+      if (isExist)
+        throw new ConflictException(
+          'Пользователь с таким email или username уже зарегистрирован',
+        );
+    }
     const user = await this.userRepository.findOneBy({ id });
 
     if (!user) throw new NotFoundException('Пользователь не найден');
@@ -85,7 +93,6 @@ export class UsersService {
     const users = await this.userRepository.find({
       where: [{ email: query }, { username: query }],
     });
-    users.forEach((item) => delete item.password);
     return users;
   }
 }

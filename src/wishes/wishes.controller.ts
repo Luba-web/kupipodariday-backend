@@ -27,7 +27,6 @@ export class WishesController {
   async findTop(): Promise<Wish[]> {
     const users = await this.wishesService.findTop();
     users.forEach((item) => {
-      delete item.owner.password;
       delete item.owner.email;
     });
     return users;
@@ -37,7 +36,6 @@ export class WishesController {
   async findLast(): Promise<Wish[]> {
     const users = await this.wishesService.findLast();
     users.forEach((item) => {
-      delete item.owner.password;
       delete item.owner.email;
     });
     return users;
@@ -51,8 +49,11 @@ export class WishesController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  async create(@Req() req, @Body() wishDto: CreateWishDto): Promise<Wish> {
-    return this.wishesService.create(req.user, wishDto);
+  async create(
+    @Req() req,
+    @Body() createWishDto: CreateWishDto,
+  ): Promise<Wish> {
+    return this.wishesService.create(req.user, createWishDto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -66,7 +67,8 @@ export class WishesController {
     if (req.user.id !== wish.owner.id) {
       throw new NotFoundException('У вас нет прав');
     }
-    return this.wishesService.update(id, updateWishDto);
+    await this.wishesService.update(id, updateWishDto);
+    return {};
   }
 
   @UseGuards(JwtAuthGuard)
@@ -83,7 +85,6 @@ export class WishesController {
     }
     await this.wishesService.removeById(id);
 
-    delete wish.owner.password;
     delete wish.owner.email;
     return wish;
   }
@@ -93,23 +94,24 @@ export class WishesController {
   async copy(@Req() req, @Param('id', ParseIntPipe) id: number) {
     const wish = await this.wishesService.findById(id);
     const { name, link, price, owner } = wish;
-    const isExist = (await this.wishesService.findOne({
-      where: {
-        name,
-        link,
-        price,
-        owner: { id: owner.id },
-      },
-      relations: { owner: true },
-    }))
-      ? true
-      : false;
-    if (isExist) {
-      throw new ForbiddenException('Вы уже копировали себе этот подарок');
+    if (req.user.id === wish.owner.id) {
+      throw new NotFoundException('Вы не можете копировать свой подарок');
     }
-
-    if (req.user.id !== wish.owner.id) {
-      throw new NotFoundException('У вас нет прав');
+    if (wish.copied > 0) {
+      const isExist = (await this.wishesService.findOne({
+        where: {
+          name,
+          link,
+          price,
+          owner: { id: owner.id },
+        },
+        relations: { owner: true },
+      }))
+        ? true
+        : false;
+      if (isExist) {
+        throw new ForbiddenException('Вы уже копировали себе этот подарок');
+      }
     }
     const copyWish = {
       name: wish.name,
@@ -119,11 +121,8 @@ export class WishesController {
       description: wish.description,
     };
     await this.wishesService.create(req.user, copyWish);
-    await this.wishesService.update(wish.id, { copied: wish.copied++ });
+    await this.wishesService.update(wish.id, { copied: wish.copied + 1 });
 
-    // if (wish.copied > 0) {
-    //   throw new NotFoundException('Вы уже копировали');
-    // }
     return {};
   }
 }

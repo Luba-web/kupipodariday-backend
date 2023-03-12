@@ -12,7 +12,6 @@ import {
 import { UseGuards } from '@nestjs/common/decorators';
 import { NotFoundException } from '@nestjs/common/exceptions';
 import { JwtAuthGuard } from 'src/auth/jwtAuth.guard';
-import { UsersService } from 'src/users/users.service';
 import { CreateWishlistDto } from './dto/createWishlist.dto';
 import { UpdateWishlistDto } from './dto/updateWishlist.dto';
 import { Wishlist } from './entities/wishlist.enitity';
@@ -22,10 +21,7 @@ import { WishlistsService } from './wishlists.service';
 // странный путь
 @Controller('wishlistlists')
 export class WishlistsController {
-  constructor(
-    private wishlistsService: WishlistsService,
-    private usersService: UsersService,
-  ) {}
+  constructor(private wishlistsService: WishlistsService) {}
 
   @Post()
   async create(
@@ -40,7 +36,6 @@ export class WishlistsController {
   async findAll(): Promise<Wishlist[]> {
     const wishlists = await this.wishlistsService.findAll();
     wishlists.forEach((item) => {
-      delete item.owner.password;
       delete item.owner.email;
     });
     return wishlists;
@@ -50,26 +45,32 @@ export class WishlistsController {
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     const wishlist = await this.wishlistsService.findOne(id);
-    delete wishlist.owner.password;
     delete wishlist.owner.email;
     return wishlist;
   }
 
   @Patch(':id')
   async update(
+    @Req() req,
     @Param('id', ParseIntPipe) id: number,
     @Body() updateWishlistDto: UpdateWishlistDto,
   ) {
-    return this.wishlistsService.update(id, updateWishlistDto);
+    const wishlist = await this.wishlistsService.findOne(id);
+    if (req.user.id === wishlist.owner.id) {
+      return await this.wishlistsService.update(+id, updateWishlistDto);
+    } else {
+      throw new NotFoundException('Этот лист вам не принадлежит');
+    }
   }
 
   @Delete(':id')
   async removeById(@Req() req, @Param('id', ParseIntPipe) id: number) {
-    const user = await this.usersService.findById(id);
-    if (user !== req.user) {
+    const wishlist = await this.wishlistsService.findOne(id);
+    if (wishlist.owner.id !== req.user.id) {
       throw new NotFoundException('Этот лист вам не принадлежит');
     }
 
-    return this.wishlistsService.removeById(id);
+    await this.wishlistsService.removeById(id);
+    return wishlist.owner.id;
   }
 }

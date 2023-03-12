@@ -32,36 +32,23 @@ export class WishlistsService {
   }
 
   async create(user: User, createDto: CreateWishlistDto) {
-    const items = await this.wishesService.findMany({
-      where: { id: In(createDto.itemsId) },
+    const wishes = await this.wishesService.findMany({
+      where: { id: In(createDto.itemsId || []) },
     });
 
-    delete createDto.itemsId;
-    const list = await this.wishlistRepository.save({
-      owner: {
-        id: user.id,
-        username: user.username,
-        about: user.about,
-        avatar: user.avatar,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      },
-      items,
+    const list = await this.wishlistRepository.create({
+      owner: user,
+      items: wishes,
       ...createDto,
     });
+    await this.wishlistRepository.save(list);
     return list;
   }
 
   async update(id: number, updateDto: UpdateWishlistDto) {
-    const items = await this.wishesService.findMany({
-      where: { id: In(updateDto.itemsId) },
-    });
-    delete updateDto.itemsId;
-    return this.wishlistRepository.save({
-      id,
-      items,
-      ...updateDto,
-    });
+    await this.wishlistRepository.update(id, updateDto);
+
+    return this.findOne(id);
   }
 
   async removeById(id: number): Promise<any> {
